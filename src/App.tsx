@@ -18,11 +18,12 @@ const LOGO_IMG = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5v
 type Screen = "splash" | "onboarding" | "login" | "register" | "home" | "report" | "map" | "profile" | "myreports" | "news" | "faq" | "leaderboard" | "contacts";
 
 interface LocationState {
-  lat: number;
-  lng: number;
+  lat: number | null;
+  lng: number | null;
   address: string;
   loading: boolean;
   error: string;
+  isReal: boolean; // true ONLY when real GPS confirmed
 }
 
 interface Report {
@@ -255,11 +256,12 @@ export default function App() {
 
   // GPS coordinates
   const [location, setLocation] = useState<LocationState>({
-    lat: 17.4849,
-    lng: 78.3990,
-    address: "Loading GPS position...",
+    lat: null,
+    lng: null,
+    address: "Waiting for GPS permission...",
     loading: true,
-    error: ""
+    error: "",
+    isReal: false,
   });
 
   // Global list of reports
@@ -288,6 +290,7 @@ export default function App() {
   // Map & FAQ refs & states
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const leafletMapRef = useRef<any>(null);
+  const userMarkerRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
@@ -382,90 +385,59 @@ export default function App() {
   // 1. WATCH POSITION & REVERSE GEOCODE (NEVER HARDCODE)
   useEffect(() => {
     let watchId: number;
-    if ("geolocation" in navigator) {
-      // Try watching with high accuracy first, falling back gracefully on error
-      watchId = navigator.geolocation.watchPosition(
-        async (pos) => {
-          const { latitude: lat, longitude: lng } = pos.coords;
-          const address = await reverseGeocode(lat, lng);
-          setLocation({ lat, lng, address, loading: false, error: "" });
-        },
-        (err) => {
-          // Log as a warning instead of a red error so sandbox frame environment does not fail
-          console.warn("Geolocation watch inactive, utilizing fallback/cached position:", err.message);
-          setLocation(prev => ({ 
-            lat: prev.lat || 17.4849,
-            lng: prev.lng || 78.3990,
-            loading: false, 
-            error: err.message, 
-            address: prev.address && prev.address !== "Loading GPS position..." ? prev.address : "KPHB Phase 1, Kukatpally, Hyderabad, 500072 (Fallback)" 
-          }));
-        },
-        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
-      );
-    } else {
-      setLocation(prev => ({ 
-        lat: prev.lat || 17.4849,
-        lng: prev.lng || 78.3990,
-        loading: false, 
-        error: "Geolocation not supported",
-        address: prev.address && prev.address !== "Loading GPS position..." ? prev.address : "KPHB Phase 1, Kukatpally, Hyderabad, 500072 (Fallback)" 
-      }));
+    if (!("geolocation" in navigator)) {
+      setLocation({
+        lat: null, lng: null,
+        address: "Geolocation not supported by this browser.",
+        loading: false, error: "not_supported", isReal: false,
+      });
+      return;
     }
-
-    return () => {
-      if (watchId) navigator.geolocation.clearWatch(watchId);
-    };
+    watchId = navigator.geolocation.watchPosition(
+      async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        const address = await reverseGeocode(lat, lng);
+        setLocation({ lat, lng, address, loading: false, error: "", isReal: true });
+      },
+      (err) => {
+        setLocation({
+          lat: null, lng: null,
+          address: err.code === 1
+            ? "Location access denied. Please allow GPS in browser settings."
+            : "Unable to determine your location. Please try again.",
+          loading: false, error: err.message, isReal: false,
+        });
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+    );
+    return () => { if (watchId) navigator.geolocation.clearWatch(watchId); };
   }, []);
 
   // Manual trigger to force reload the live position (resolves exact location)
   const refreshLocation = useCallback(() => {
     setLocation(prev => ({ ...prev, loading: true }));
-    if ("geolocation" in navigator) {
-      // First attempt: High Accuracy
-      navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const { latitude: lat, longitude: lng } = pos.coords;
-          const address = await reverseGeocode(lat, lng);
-          setLocation({ lat, lng, address, loading: false, error: "" });
-          showToast("Exact live location updated successfully!", "success");
-        },
-        (err) => {
-          console.warn("First high-accuracy geolocation attempt failed, trying low accuracy...", err.message);
-          // Second attempt: Low Accuracy fallback
-          navigator.geolocation.getCurrentPosition(
-            async (pos) => {
-              const { latitude: lat, longitude: lng } = pos.coords;
-              const address = await reverseGeocode(lat, lng);
-              setLocation({ lat, lng, address, loading: false, error: "" });
-              showToast("Live location updated (low accuracy)!", "success");
-            },
-            (err2) => {
-              console.warn("All geolocation attempts failed, utilizing fallback:", err2.message);
-              setLocation(prev => ({
-                lat: prev.lat || 17.4849,
-                lng: prev.lng || 78.3990,
-                loading: false,
-                error: err2.message,
-                address: prev.address && prev.address !== "Loading GPS position..." ? prev.address : "KPHB Phase 1, Kukatpally, Hyderabad, 500072 (Fallback)"
-              }));
-              showToast("Using default/cached location (GPS permission inactive).", "info");
-            },
-            { enableHighAccuracy: false, timeout: 5000, maximumAge: 30000 }
-          );
-        },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-      );
-    } else {
-      setLocation(prev => ({
-        lat: prev.lat || 17.4849,
-        lng: prev.lng || 78.3990,
-        loading: false,
-        error: "Geolocation not supported",
-        address: prev.address && prev.address !== "Loading GPS position..." ? prev.address : "KPHB Phase 1, Kukatpally, Hyderabad, 500072 (Fallback)"
-      }));
-      showToast("Geolocation is not supported by your browser.", "error");
-    }
+    if (!("geolocation" in navigator)) { showToast("Geolocation not supported.", "error"); return; }
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        const address = await reverseGeocode(lat, lng);
+        setLocation({ lat, lng, address, loading: false, error: "", isReal: true });
+        showToast("Live location updated!", "success");
+        if (leafletMapRef.current && lat && lng) {
+          leafletMapRef.current.setView([lat, lng], 16);
+          if (userMarkerRef.current) userMarkerRef.current.setLatLng([lat, lng]);
+        }
+      },
+      (err) => {
+        setLocation(prev => ({
+          ...prev, loading: false, error: err.message,
+          address: err.code === 1 ? "GPS permission denied." : "Location unavailable.",
+          isReal: false,
+        }));
+        showToast(err.code === 1 ? "GPS permission denied." : "Location update failed.", "error");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
   }, [showToast]);
 
   // Fetch initial report list from server if reachable to show up-to-date reports
@@ -526,34 +498,56 @@ export default function App() {
 
     if (leafletMapRef.current) {
       leafletMapRef.current.remove();
+      leafletMapRef.current = null;
+      userMarkerRef.current = null;
     }
 
-    const centerLat = location.lat || 17.4849;
-    const centerLng = location.lng || 78.3990;
+    // HARD GUARD — never init without confirmed real GPS
+    if (!location.isReal || location.lat === null || location.lng === null) return;
 
-    const map = L.map(mapDivRef.current, {
-      zoomControl: false,
-    }).setView([centerLat, centerLng], 14);
+    const map = L.map(mapDivRef.current, { zoomControl: false })
+      .setView([location.lat, location.lng], 16);
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; OpenStreetMap contributors',
+      attribution: "&copy; OpenStreetMap contributors",
     }).addTo(map);
 
     L.control.zoom({ position: "bottomright" }).addTo(map);
 
-    // Blue user pin
     const userIcon = L.divIcon({
       html: `
-        <div style="position: relative; width: 18px; height: 18px; background-color: #2563EB; border: 3.2px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(37,99,235,0.8); display: flex; align-items: center; justify-content: center;">
-          <div style="position: absolute; width: 34px; height: 34px; background-color: #2563EB; border-radius: 50%; opacity: 0.35; animation: pulse 2s infinite;"></div>
-        </div>
-      `,
-      className: "custom-user-icon",
-      iconSize: [18, 18],
-      iconAnchor: [9, 9]
+        <div style="position:relative;width:20px;height:20px;display:flex;align-items:center;justify-content:center;">
+          <div style="position:absolute;width:42px;height:42px;background:rgba(37,99,235,0.18);border-radius:50%;animation:gpsRing 2s ease-out infinite;"></div>
+          <div style="position:absolute;width:28px;height:28px;background:rgba(37,99,235,0.25);border-radius:50%;animation:gpsRing 2s ease-out infinite 0.4s;"></div>
+          <div style="width:18px;height:18px;background:#2563EB;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(37,99,235,0.6);position:relative;z-index:2;"></div>
+        </div>`,
+      className: "",
+      iconSize: [42, 42],
+      iconAnchor: [21, 21],
     });
-    L.marker([centerLat, centerLng], { icon: userIcon }).addTo(map)
-      .bindPopup("<strong style='color:#2563EB; font-family:sans-serif;'>My Live Location</strong>");
+
+    const marker = L.marker([location.lat, location.lng], { icon: userIcon })
+      .addTo(map)
+      .bindPopup(`
+        <div style="font-family:system-ui,sans-serif;padding:4px 2px;min-width:160px;">
+          <div style="font-weight:900;font-size:12px;color:#2563EB;margin-bottom:4px;">📍 Your Current Location</div>
+          <div style="font-size:10px;color:#374151;line-height:1.4;">${location.address}</div>
+          <div style="font-size:9px;color:#9CA3AF;margin-top:6px;border-top:1px solid #F3F4F6;padding-top:4px;">
+            ${location.lat.toFixed(6)}°N, ${location.lng.toFixed(6)}°E
+          </div>
+        </div>
+      `);
+
+    userMarkerRef.current = marker;
+
+    L.circle([location.lat, location.lng], {
+      radius: 60,
+      color: "#2563EB",
+      fillColor: "#2563EB",
+      fillOpacity: 0.06,
+      weight: 1,
+      dashArray: "4 4",
+    }).addTo(map);
 
     // Report pins
     reports.forEach((rep) => {
@@ -610,11 +604,18 @@ export default function App() {
     });
 
     setTimeout(() => {
-      map.invalidateSize();
+      if (map) map.invalidateSize();
     }, 350);
 
     leafletMapRef.current = map;
-  }, [location.lat, location.lng, reports]);
+  }, [location.lat, location.lng, location.isReal, location.address, reports]);
+
+  // Move marker live when GPS updates
+  useEffect(() => {
+    if (screen !== "map" || !leafletMapRef.current || !userMarkerRef.current) return;
+    if (!location.isReal || location.lat === null || location.lng === null) return;
+    userMarkerRef.current.setLatLng([location.lat, location.lng]);
+  }, [location.lat, location.lng, location.isReal, screen]);
 
   // Map Screen effect loader
   useEffect(() => {
@@ -1747,80 +1748,88 @@ export default function App() {
             ============================================================== */}
         {screen === "map" && (
           <div className="flex flex-col flex-1 pb-20 relative">
-            
-            {/* Header with Title & Refresh button */}
-            <div className="bg-white border-b border-neutral-100 p-4 flex justify-between items-center shadow-xs z-20">
+            {/* Header */}
+            <div className="bg-white border-b border-neutral-100 p-4 flex justify-between items-center shadow-sm z-20">
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-[#2563EB]" />
-                <h2 className="text-sm font-black text-neutral-800 uppercase tracking-wide">Live Infrastructure Map</h2>
+                <div>
+                  <h2 className="text-sm font-black text-neutral-800">Live Location Map</h2>
+                  <p className="text-[10px] text-neutral-400 font-semibold mt-0.5">
+                    {location.isReal ? "Showing your exact GPS position" : "Waiting for GPS permission..."}
+                  </p>
+                </div>
               </div>
-              <button 
-                onClick={() => {
-                  initMap();
-                  showToast("Map layers synced successfully!", "success");
-                }} 
-                className="p-2 hover:bg-neutral-50 rounded-full transition-all text-neutral-600"
-                title="Refresh Map Layers"
-              >
-                <RefreshCw className="w-4 h-4" />
+              <button onClick={refreshLocation} className="p-2 hover:bg-neutral-50 rounded-full text-neutral-600">
+                <RefreshCw className={`w-4 h-4 ${location.loading ? "animate-spin" : ""}`} />
               </button>
             </div>
 
-            {/* Leaflet Mount viewport container */}
-            <div className="flex-1 w-full bg-neutral-100 relative min-h-[360px] md:min-h-[460px]" id="leaflet-map-container">
-              <div ref={mapDivRef} className="absolute inset-0 h-full w-full z-10" />
-              
-              {/* Floating Center Map GPS button */}
-              <button
-                onClick={() => {
-                  if (leafletMapRef.current) {
-                    leafletMapRef.current.setView([location.lat, location.lng], 16);
-                    showToast("Centered map on your exact location!", "info");
-                  }
-                }}
-                className="absolute bottom-4 left-4 z-20 w-11 h-11 bg-white hover:bg-neutral-50 active:scale-95 text-blue-600 rounded-full shadow-lg flex items-center justify-center transition-all border border-neutral-200"
-                title="Center on My Location"
-              >
-                <MapPin className="w-5 h-5 animate-pulse" />
-              </button>
+            {/* Map area */}
+            <div className="flex-1 w-full bg-neutral-100 relative min-h-[380px]">
+              {location.isReal ? (
+                <>
+                  <div ref={mapDivRef} className="absolute inset-0 h-full w-full z-10" />
+                  <button
+                    onClick={() => {
+                      if (leafletMapRef.current && location.lat && location.lng)
+                        leafletMapRef.current.setView([location.lat, location.lng], 17);
+                    }}
+                    className="absolute bottom-4 left-4 z-20 w-11 h-11 bg-white hover:bg-neutral-50 text-blue-600 rounded-full shadow-lg flex items-center justify-center border border-neutral-200 transition-all active:scale-95"
+                  >
+                    <MapPin className="w-5 h-5" />
+                  </button>
+                </>
+              ) : (
+                /* No GPS — clean state, zero fake map */
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">
+                  <div className="w-20 h-20 rounded-full bg-blue-50 border-2 border-blue-100 flex items-center justify-center">
+                    <MapPin className="w-9 h-9 text-blue-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-neutral-800 text-base mb-1">
+                      {location.loading ? "Acquiring GPS Signal..." : "Location Access Needed"}
+                    </h3>
+                    <p className="text-xs text-neutral-500 leading-relaxed max-w-[260px]">
+                      {location.error
+                        ? "Please allow location access in your browser settings, then tap Refresh GPS."
+                        : "Waiting for your device GPS. This may take a few seconds..."}
+                    </p>
+                  </div>
+                  <button
+                    onClick={refreshLocation}
+                    disabled={location.loading}
+                    className="px-5 py-2.5 bg-[#2563EB] text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-md disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${location.loading ? "animate-spin" : ""}`} />
+                    {location.loading ? "Locating..." : "Refresh GPS"}
+                  </button>
+                </div>
+              )}
             </div>
 
-            {/* Bottom Floating Map legend */}
+            {/* Legend */}
             <div className="bg-white border-t border-neutral-100 p-4 shadow-lg z-20">
-              <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-2.5">Map Markers Index</h4>
-              <div className="grid grid-cols-3 gap-2.5 text-xs text-neutral-700 font-bold">
-                
-                <div className="flex items-center gap-1.5 p-2 bg-amber-50 rounded-lg border border-amber-100">
-                  <span className="text-sm">⚠️</span>
-                  <div>
-                    <span className="block text-[10px] text-amber-800 leading-none">Pothole</span>
-                    <span className="text-[8px] text-amber-600/70 font-semibold leading-none block mt-0.5">
-                      {reports.filter(r => r.type === "Pothole").length} reported
-                    </span>
-                  </div>
+              <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-2.5">Map Legend</h4>
+              <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                <div className="w-4 h-4 rounded-full bg-blue-600 border-2 border-white shadow-sm flex-shrink-0"></div>
+                <div>
+                  <span className="block text-xs font-black text-blue-800">Your Current Location</span>
+                  <span className="text-[10px] text-blue-600 font-semibold">
+                    {location.isReal && location.lat !== null
+                      ? `${location.lat.toFixed(5)}°N, ${location.lng!.toFixed(5)}°E`
+                      : "Waiting for GPS signal..."}
+                  </span>
                 </div>
-
-                <div className="flex items-center gap-1.5 p-2 bg-emerald-50 rounded-lg border border-emerald-100">
-                  <span className="text-sm">🗑️</span>
-                  <div>
-                    <span className="block text-[10px] text-emerald-800 leading-none">Garbage</span>
-                    <span className="text-[8px] text-emerald-600/70 font-semibold leading-none block mt-0.5">
-                      {reports.filter(r => r.type === "Garbage").length} reported
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5 p-2 bg-blue-50 rounded-lg border border-blue-100">
-                  <div className="w-3.5 h-3.5 rounded-full bg-blue-600 border border-white flex-shrink-0"></div>
-                  <div>
-                    <span className="block text-[10px] text-blue-800 leading-none">Me</span>
-                    <span className="text-[8px] text-blue-600/70 font-semibold leading-none block mt-0.5">Current GPS</span>
-                  </div>
-                </div>
-
+                {location.isReal && (
+                  <span className="ml-auto text-[9px] font-black bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
+                    LIVE
+                  </span>
+                )}
               </div>
+              <p className="text-[10px] text-neutral-400 font-semibold mt-2.5 text-center">
+                Only your real GPS location is shown on this map.
+              </p>
             </div>
-
           </div>
         )}
 
@@ -2717,6 +2726,10 @@ export default function App() {
             transform: scale(0.95);
             box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
           }
+        }
+        @keyframes gpsRing {
+          0%   { transform: scale(0.5); opacity: 0.8; }
+          100% { transform: scale(1.8); opacity: 0; }
         }
       `}</style>
 
