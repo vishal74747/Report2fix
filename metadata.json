@@ -1,0 +1,8 @@
+{
+  "name": "Report2Fix",
+  "description": "A civic issue reporting tool for Indian citizens to report potholes and garbage using AI detection.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

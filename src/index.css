@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* Brand Colors */
+  --color-primary-dark: #1B4332;
+  --color-accent-green: #52B788;
+  --color-brand-blue: #2563EB;
+  --color-brand-bg: #F0FDF4;
+  --color-text-dark: #1A1A1A;
+  --color-text-muted: #6B7280;
+}
+
+/* Custom CSS for smooth transitions and scrollbars */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+/* Custom leaf-like map pin markers */
+.leaflet-div-icon-pothole {
+  background: transparent;
+  border: none;
+}
+.leaflet-div-icon-garbage {
+  background: transparent;
+  border: none;
+}
+.leaflet-div-icon-other {
+  background: transparent;
+  border: none;
+}
+
+/* Custom toast style */
+.toast-container {
+  position: fixed;
+  top: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* Base custom classes to match responsive design rule 8 */
+.app-container-max {
+  max-width: 430px;
+  width: 100%;
+  margin: 0 auto;
+  min-height: 100vh;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  background-color: #ffffff;
+}
+
+/* Leaflet marker container height fixes */
+#leaflet-map-container {
+  z-index: 10;
+}
