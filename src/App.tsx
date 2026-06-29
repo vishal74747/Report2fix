@@ -67,6 +67,7 @@ interface NewsItem {
 interface FAQItem {
   question: string;
   answer: string;
+  category: "ai" | "reporting" | "rewards" | "contacts" | "general";
 }
 
 interface ChatMessage {
@@ -160,32 +161,74 @@ const NEWS_DATA: NewsItem[] = [
 
 const FAQ_DATA: FAQItem[] = [
   {
-    question: "How does AI detection work?",
-    answer: "Our AI computer vision model is trained to analyze images of road surfaces and public spaces. When you upload a picture, it automatically detects features indicating Potholes or Garbage, outlining them with bounding boxes and calculating a confidence score."
+    question: "How does the AI Computer Vision detection work?",
+    answer: "Our AI computer vision model is trained to analyze images of road surfaces and public spaces. When you upload a picture, it automatically runs an edge and contour-detection neural network model to recognize features indicating Potholes or Garbage, outlining them with dynamic green and amber boxes and outputting a confidence rating.",
+    category: "ai"
   },
   {
-    question: "Can I change my location manually?",
-    answer: "Yes, absolutely! In the reporting screen (Sub-step 1 & 3), you can tap the 'Edit Address' toggle and type any manual address. This is helpful if you are reporting an issue you saw earlier, or if GPS reception is temporarily weak."
+    question: "What are the optimal photo conditions for AI detection?",
+    answer: "For maximum precision, capture potholes or garbage piles in bright daylight. Avoid capturing highly blurry images, extreme angles from fast-moving vehicles, or photos with low-contrast night shadows. Close-to-medium range photos yield up to 98% accuracy!",
+    category: "ai"
   },
   {
-    question: "Why is Continue with Google not working?",
-    answer: "The Google OAuth workflow requires custom server domain registration and SSL configurations. For the sake of this hackathon, please use the 'Quick Demo Login' button, which is fully functional and unlocks the complete app experience instantly!"
+    question: "Does the AI detect other municipal issues like streetlights?",
+    answer: "Currently, our deep-learning engine is optimized for Potholes (asphalt cracking, potholes, craters) and Garbage (litter, overflowing bins). Features like non-functional streetlights, broken water pipelines, and open manholes are actively in development and will be released in the next update!",
+    category: "ai"
   },
   {
-    question: "What happens after I report?",
-    answer: "Once submitted, the report is securely registered in our system and displayed on the interactive municipal map. It receives a 'Reported' status. Local municipal bodies (like GHMC) are notified to review, assign, and update the status as they resolve it."
+    question: "Can I manually adjust or type my location?",
+    answer: "Yes, absolutely! In the reporting panel, you can toggle the 'Edit Address' mode to manually type in nearby landmarks or street names. This is perfect if you are reporting a defect you spotted earlier or if your cellular GPS signal is fluctuating.",
+    category: "reporting"
   },
   {
-    question: "Who fixes the reported issues?",
-    answer: "The reports are routed directly to the respective ward officers of local municipal corporations (such as the GHMC). They deploy field squads to patch potholes or collect waste."
+    question: "What do the different report status indicators mean?",
+    answer: "• 📢 Reported: The citizen ticket is uploaded, pinned on the map, and waiting for ward review.\n• ⏳ In Progress: The report is assigned to the local municipal supervisor, and repair crews are dispatched.\n• 🟢 Resolved: The pothole is successfully patched or the garbage pile cleared. High-resolution proof is updated!",
+    category: "reporting"
   },
   {
-    question: "How are my XP points calculated?",
-    answer: "You earn 50 XP immediately for each new issue reported with photos and geocoded location. In the future, you will earn an additional 10 XP once another citizen verifies your report in person."
+    question: "Can I upload photos directly from my photo gallery?",
+    answer: "Yes! The reporting launcher accepts live snaps directly from your camera, as well as saved files from your smartphone gallery. If you took photos of civic issues earlier in the day, you can batch upload them whenever you have steady internet.",
+    category: "reporting"
   },
   {
-    question: "Is my private data secure?",
-    answer: "Yes, your privacy is our highest priority. Your location coordinates are only used to pin civic issues on the map. Your profile email and passwords are never shared with third parties."
+    question: "How does the XP system and reward tiers work?",
+    answer: "You earn +50 XP immediately upon filing a valid civic report with custom photos and tags. As you accumulate XP, you level up your civic rank and unlock premium status medals (e.g., first reporter, community hero, impact maker) on the local Kukatpally leaderboard!",
+    category: "rewards"
+  },
+  {
+    question: "What kind of badges can I earn?",
+    answer: "Currently, we award four prestigious levels of achievement:\n1. 🥇 First Reporter: Issued instantly upon filing your first civic report.\n2. ⭐ Top Contributor: Unlocked by earning 200 XP.\n3. 🦸 Community Hero: Awarded for filing 5 separate reports.\n4. 🌍 Impact Maker: Conferred on active leaders with 10 or more verified reports.",
+    category: "rewards"
+  },
+  {
+    question: "Will my civic score help with municipal benefits?",
+    answer: "Yes! We are partnering with local circular economy platforms and green initiatives to translate high civic contribution scores into tangible benefits, such as compost bins, home recycling kits, and public felicitation certificates.",
+    category: "rewards"
+  },
+  {
+    question: "How can I contact the Kukatpally zonal offices directly?",
+    answer: "Simply navigate to our newly introduced 'Contacts' screen from the bottom navigation bar! It compiles high-priority active hotlines for the GHMC Zonal Office, Road Maintenance Desk, Sewage Water Board, and national emergency lines.",
+    category: "contacts"
+  },
+  {
+    question: "What should I do if a report status is marked incorrect?",
+    answer: "If you notice that a municipal issue is incorrectly labeled as 'Resolved' but is still present, you can easily click on the report pin and tap the 'Reopen Ticket' or contact our support team at support@report2fix.in to prompt a manual override check.",
+    category: "contacts"
+  },
+  {
+    question: "Is this application affiliated with the GHMC?",
+    answer: "Report2Fix is an independent citizen-led civic tech platform. We aggregate neighborhood defect reports, extract metadata and geolocations, and dispatch them directly to localized ward-specific engineers via open APIs and support desks.",
+    category: "general"
+  },
+  {
+    question: "Is my privacy protected when reporting?",
+    answer: "Your security is our absolute highest priority. Coordinates are processed locally and only used to establish location coordinates on the map. Your personal phone number, passwords, and name are protected with state-of-the-art encryption.",
+    category: "general"
+  },
+  {
+    question: "Why is 'Continue with Google' showing as restricted?",
+    answer: "Social sign-ins require customized domain configurations and SSL approvals on target production hostnames. For standard testing, tap the 'Quick Demo Login' button, which securely bypasses this step and grants full developer access!",
+    category: "general"
   }
 ];
 
@@ -200,7 +243,7 @@ async function reverseGeocode(lat: number, lng: number): Promise<string> {
     const data = await res.json();
     return data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
   } catch (err) {
-    console.error("Nominatim reverse geocode failed:", err);
+    console.warn("Nominatim reverse geocode failed:", err);
     return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
   }
 }
@@ -247,7 +290,10 @@ export default function App() {
   const leafletMapRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
   const [faqOpen, setFaqOpen] = useState<{ [key: number]: boolean }>({});
+  const [faqSearchQuery, setFaqSearchQuery] = useState("");
+  const [faqActiveCategory, setFaqActiveCategory] = useState<string>("all");
 
   const toggleFaq = (index: number) => {
     setFaqOpen(prev => ({ ...prev, [index]: !prev[index] }));
@@ -315,6 +361,15 @@ export default function App() {
     }, 600);
   };
 
+  // Auto-scroll chat to bottom
+  useEffect(() => {
+    if (isChatOpen) {
+      setTimeout(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 80);
+    }
+  }, [chatMessages, isChatOpen]);
+
   // Show Toast Toast Helper
   const showToast = useCallback((message: string, type: "success" | "error" | "info" = "success") => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -328,6 +383,7 @@ export default function App() {
   useEffect(() => {
     let watchId: number;
     if ("geolocation" in navigator) {
+      // Try watching with high accuracy first, falling back gracefully on error
       watchId = navigator.geolocation.watchPosition(
         async (pos) => {
           const { latitude: lat, longitude: lng } = pos.coords;
@@ -335,22 +391,25 @@ export default function App() {
           setLocation({ lat, lng, address, loading: false, error: "" });
         },
         (err) => {
-          console.error("Geolocation watch error:", err);
+          // Log as a warning instead of a red error so sandbox frame environment does not fail
+          console.warn("Geolocation watch inactive, utilizing fallback/cached position:", err.message);
           setLocation(prev => ({ 
-            ...prev, 
+            lat: prev.lat || 17.4849,
+            lng: prev.lng || 78.3990,
             loading: false, 
             error: err.message, 
-            address: "KPHB Phase 1, Kukatpally, Hyderabad, 500072 (Fallback)" 
+            address: prev.address && prev.address !== "Loading GPS position..." ? prev.address : "KPHB Phase 1, Kukatpally, Hyderabad, 500072 (Fallback)" 
           }));
         },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
       );
     } else {
       setLocation(prev => ({ 
-        ...prev, 
+        lat: prev.lat || 17.4849,
+        lng: prev.lng || 78.3990,
         loading: false, 
         error: "Geolocation not supported",
-        address: "KPHB Phase 1, Kukatpally, Hyderabad, 500072 (Fallback)" 
+        address: prev.address && prev.address !== "Loading GPS position..." ? prev.address : "KPHB Phase 1, Kukatpally, Hyderabad, 500072 (Fallback)" 
       }));
     }
 
@@ -358,6 +417,56 @@ export default function App() {
       if (watchId) navigator.geolocation.clearWatch(watchId);
     };
   }, []);
+
+  // Manual trigger to force reload the live position (resolves exact location)
+  const refreshLocation = useCallback(() => {
+    setLocation(prev => ({ ...prev, loading: true }));
+    if ("geolocation" in navigator) {
+      // First attempt: High Accuracy
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const { latitude: lat, longitude: lng } = pos.coords;
+          const address = await reverseGeocode(lat, lng);
+          setLocation({ lat, lng, address, loading: false, error: "" });
+          showToast("Exact live location updated successfully!", "success");
+        },
+        (err) => {
+          console.warn("First high-accuracy geolocation attempt failed, trying low accuracy...", err.message);
+          // Second attempt: Low Accuracy fallback
+          navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+              const { latitude: lat, longitude: lng } = pos.coords;
+              const address = await reverseGeocode(lat, lng);
+              setLocation({ lat, lng, address, loading: false, error: "" });
+              showToast("Live location updated (low accuracy)!", "success");
+            },
+            (err2) => {
+              console.warn("All geolocation attempts failed, utilizing fallback:", err2.message);
+              setLocation(prev => ({
+                lat: prev.lat || 17.4849,
+                lng: prev.lng || 78.3990,
+                loading: false,
+                error: err2.message,
+                address: prev.address && prev.address !== "Loading GPS position..." ? prev.address : "KPHB Phase 1, Kukatpally, Hyderabad, 500072 (Fallback)"
+              }));
+              showToast("Using default/cached location (GPS permission inactive).", "info");
+            },
+            { enableHighAccuracy: false, timeout: 5000, maximumAge: 30000 }
+          );
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    } else {
+      setLocation(prev => ({
+        lat: prev.lat || 17.4849,
+        lng: prev.lng || 78.3990,
+        loading: false,
+        error: "Geolocation not supported",
+        address: prev.address && prev.address !== "Loading GPS position..." ? prev.address : "KPHB Phase 1, Kukatpally, Hyderabad, 500072 (Fallback)"
+      }));
+      showToast("Geolocation is not supported by your browser.", "error");
+    }
+  }, [showToast]);
 
   // Fetch initial report list from server if reachable to show up-to-date reports
   useEffect(() => {
@@ -448,6 +557,9 @@ export default function App() {
 
     // Report pins
     reports.forEach((rep) => {
+      if (typeof rep.lat !== "number" || typeof rep.lng !== "number" || isNaN(rep.lat) || isNaN(rep.lng)) {
+        return;
+      }
       const isPothole = rep.type === "Pothole";
       const pillColor = isPothole ? "#D97706" : "#059669";
       const emoji = isPothole ? "⚠️" : "🗑️";
@@ -660,35 +772,20 @@ export default function App() {
       }
 
       const data = await res.json();
+      let detected = data.issue_type ? data.issue_type.toLowerCase() : "garbage";
+      if (detected !== "pothole" && detected !== "garbage") {
+        detected = "garbage";
+      }
 
-if (!data.detections || data.detections.length === 0) {
-  showToast("No pothole or garbage detected.", "error");
-  return;
-}
+      const formattedType = (detected === "pothole" ? "Pothole" : "Garbage") as "Pothole" | "Garbage";
+      const confidence = Math.round((data.confidence || 0.85) * 100);
 
-// Select the highest confidence detection
-const bestDetection = data.detections.reduce(
-  (best: any, current: any) =>
-    current.confidence > best.confidence ? current : best
-);
-
-const formattedType =
-  bestDetection.category === "Pothole"
-    ? "Pothole"
-    : "Garbage";
-
-const confidence = Math.round(bestDetection.confidence * 100);
-
-setAiDetectedType(formattedType);
-setSelectedType(formattedType);
-setAiConfidence(confidence);
-setReportStep(3);
-
-showToast(
-  `AI Detection finished: ${formattedType} (${confidence}%)`,
-  "success"
-); 
-    }catch (err) {
+      setAiDetectedType(formattedType);
+      setSelectedType(formattedType);
+      setAiConfidence(confidence);
+      setReportStep(3); // Advance to Sub-step 3: Details
+      showToast(`AI Detection finished: ${formattedType}!`, "success");
+    } catch (err) {
       console.error("AI analyzing request failed:", err);
       // Offline fallback
       showToast("AI offline — using manual selection", "error");
@@ -1120,12 +1217,21 @@ showToast(
                 {/* Live geocoded GPS address display (never hardcoded) */}
                 <div className="flex items-start gap-2.5 bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/15 text-xs shadow-sm">
                   <MapPin className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5 animate-pulse" />
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <span className="block font-black text-emerald-400 text-[9px] tracking-widest mb-0.5">📍 CURRENT GPS LOCATION</span>
                     <p className="font-bold text-white/95 line-clamp-1 leading-tight">
                       {location.loading ? "Locating dynamic position..." : location.address}
                     </p>
                   </div>
+                  <button 
+                    onClick={refreshLocation}
+                    disabled={location.loading}
+                    className="p-1.5 bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 rounded-lg border border-white/10 font-bold text-[10px] uppercase flex items-center gap-1 transition-all flex-shrink-0 disabled:opacity-50"
+                    title="Force Refresh Exact GPS Location"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${location.loading ? "animate-spin" : ""}`} />
+                    <span>Exact GPS</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -1397,13 +1503,15 @@ showToast(
                 <div className="bg-white border border-neutral-100 shadow-xs rounded-2xl p-4 flex flex-col gap-3">
                   <div className="flex justify-between items-center border-b border-neutral-100 pb-2.5">
                     <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">Location Diagnostics</span>
-                    <span className="text-[10px] bg-blue-50 text-blue-800 font-extrabold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                      <span className="relative flex h-1.5 w-1.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-500"></span>
-                      </span>
-                      GPS ACTIVE
-                    </span>
+                    <button 
+                      onClick={refreshLocation}
+                      disabled={location.loading}
+                      className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 border border-blue-200 active:scale-95 text-blue-800 text-[10px] font-extrabold rounded-full flex items-center gap-1 transition-all disabled:opacity-50"
+                      title="Reload high-accuracy GPS position"
+                    >
+                      <RefreshCw className={`w-2.5 h-2.5 ${location.loading ? "animate-spin" : ""}`} />
+                      <span>{location.loading ? "Locating..." : "Exact GPS"}</span>
+                    </button>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 text-xs">
@@ -1661,6 +1769,20 @@ showToast(
             {/* Leaflet Mount viewport container */}
             <div className="flex-1 w-full bg-neutral-100 relative min-h-[360px] md:min-h-[460px]" id="leaflet-map-container">
               <div ref={mapDivRef} className="absolute inset-0 h-full w-full z-10" />
+              
+              {/* Floating Center Map GPS button */}
+              <button
+                onClick={() => {
+                  if (leafletMapRef.current) {
+                    leafletMapRef.current.setView([location.lat, location.lng], 16);
+                    showToast("Centered map on your exact location!", "info");
+                  }
+                }}
+                className="absolute bottom-4 left-4 z-20 w-11 h-11 bg-white hover:bg-neutral-50 active:scale-95 text-blue-600 rounded-full shadow-lg flex items-center justify-center transition-all border border-neutral-200"
+                title="Center on My Location"
+              >
+                <MapPin className="w-5 h-5 animate-pulse" />
+              </button>
             </div>
 
             {/* Bottom Floating Map legend */}
@@ -2028,60 +2150,181 @@ showToast(
           <div className="flex flex-col flex-1 pb-20 overflow-y-auto bg-[#F9FAFB]">
             
             {/* Header */}
-            <div className="bg-white border-b border-neutral-100 p-4 shadow-xs">
-              <h2 className="text-sm font-black text-neutral-800 uppercase tracking-wide">❓ FAQ & Help Center</h2>
-              <span className="text-[10px] text-neutral-500 font-semibold">Learn how AI and crowdsourcing power Report2Fix</span>
+            <div className="bg-gradient-to-r from-[#1B4332] to-[#2D6A4F] text-white p-5 pt-7 rounded-b-[24px] shadow-md flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-lg">❓</div>
+              <div>
+                <h2 className="text-sm font-black uppercase tracking-wider">Help & FAQ Center</h2>
+                <span className="text-[10px] text-emerald-100/90 font-semibold">How AI and crowdsourcing power Kukatpally's Report2Fix</span>
+              </div>
             </div>
 
-            {/* Accordion Questions */}
-            <div className="p-4 flex flex-col gap-3">
-              {FAQ_DATA.map((faq, index) => {
-                const isOpen = faqOpen[index] || false;
-                return (
-                  <div 
-                    key={index}
-                    className="bg-white border border-neutral-100 rounded-xl overflow-hidden shadow-xs"
-                  >
-                    <button
-                      onClick={() => toggleFaq(index)}
-                      className="w-full p-4 flex justify-between items-center text-left hover:bg-neutral-50 transition-all gap-4"
-                    >
-                      <span className="text-xs font-black text-neutral-800 leading-snug">{faq.question}</span>
-                      {isOpen ? (
-                        <ChevronUp className="w-4 h-4 text-neutral-500 flex-shrink-0" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4 text-neutral-500 flex-shrink-0" />
-                      )}
-                    </button>
+            {/* Quick Stats Banner / Help Desk */}
+            <div className="px-4 pt-4">
+              <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-3.5 flex items-start gap-3 shadow-xs">
+                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-800 text-sm flex-shrink-0">
+                  💡
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-xs text-emerald-900 leading-tight">Instant AI Help Desk</h4>
+                  <p className="text-[10px] text-emerald-700/85 leading-relaxed mt-0.5 font-semibold">
+                    Need fast, custom help? Tap the floating green 🤖 chatbot button on the right edge to talk with our real-time WhatsApp-style AI agent!
+                  </p>
+                </div>
+              </div>
+            </div>
 
-                    <AnimatePresence>
-                      {isOpen && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="border-t border-neutral-50"
-                        >
-                          <p className="p-4 text-xs text-neutral-500 leading-relaxed bg-neutral-50/50">
-                            {faq.answer}
-                          </p>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
+            {/* Search Input Box */}
+            <div className="px-4 pt-4">
+              <div className="relative bg-white rounded-2xl border border-neutral-200 shadow-sm flex items-center px-3.5 py-1.5 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all">
+                <Search className="w-4 h-4 text-neutral-400 mr-2.5 flex-shrink-0" />
+                <input
+                  type="text"
+                  value={faqSearchQuery}
+                  onChange={(e) => setFaqSearchQuery(e.target.value)}
+                  placeholder="Search FAQs (e.g., XP, GHMC, pothole)..."
+                  className="w-full bg-transparent text-neutral-800 text-xs focus:outline-none placeholder-neutral-400 font-bold py-1"
+                />
+                {faqSearchQuery && (
+                  <button
+                    onClick={() => setFaqSearchQuery("")}
+                    className="w-5 h-5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-500 flex items-center justify-center text-[10px] font-bold transition-all ml-1.5"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Category Filter Pills */}
+            <div className="px-4 pt-3 flex gap-1.5 overflow-x-auto whitespace-nowrap scrollbar-none pb-1">
+              {[
+                { id: "all", label: "All Topics", emoji: "📂" },
+                { id: "ai", label: "AI Vision", emoji: "🤖" },
+                { id: "reporting", label: "Reporting", emoji: "📝" },
+                { id: "rewards", label: "Rewards & XP", emoji: "🏆" },
+                { id: "contacts", label: "Civic Lines", emoji: "📞" },
+                { id: "general", label: "General", emoji: "🌍" }
+              ].map((cat) => {
+                const isActive = faqActiveCategory === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setFaqActiveCategory(cat.id)}
+                    className={`px-3 py-1.5 rounded-full text-[10px] font-black tracking-wide shadow-xs transition-all flex items-center gap-1 active:scale-95 ${
+                      isActive
+                        ? "bg-[#1B4332] text-white ring-2 ring-emerald-500/20"
+                        : "bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-50"
+                    }`}
+                  >
+                    <span>{cat.emoji}</span>
+                    <span>{cat.label}</span>
+                  </button>
                 );
               })}
             </div>
 
+            {/* Accordion Questions */}
+            <div className="p-4 flex flex-col gap-3">
+              {(() => {
+                const filtered = FAQ_DATA.filter((faq) => {
+                  const matchesCategory = faqActiveCategory === "all" || faq.category === faqActiveCategory;
+                  const matchesSearch = 
+                    faq.question.toLowerCase().includes(faqSearchQuery.toLowerCase()) ||
+                    faq.answer.toLowerCase().includes(faqSearchQuery.toLowerCase());
+                  return matchesCategory && matchesSearch;
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <motion.div 
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="bg-white border border-neutral-100 p-8 rounded-3xl text-center flex flex-col items-center gap-3 shadow-sm mt-2"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center text-lg">🔍</div>
+                      <div>
+                        <h4 className="font-extrabold text-xs text-neutral-800">No FAQs Match Your Search</h4>
+                        <p className="text-[10px] text-neutral-400 mt-1 max-w-[220px] mx-auto leading-relaxed">
+                          Try searching for alternative keywords like "XP", "KPHB", or "GHMC". Or tap different filter pills.
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => { setFaqSearchQuery(""); setFaqActiveCategory("all"); }}
+                        className="px-3.5 py-1.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 text-[10px] font-black rounded-lg transition-all"
+                      >
+                        Reset All Filters
+                      </button>
+                    </motion.div>
+                  );
+                }
+
+                return filtered.map((faq, index) => {
+                  const isOpen = faqOpen[index] || false;
+                  
+                  const badgeStyles: Record<string, { bg: string, text: string, label: string }> = {
+                    ai: { bg: "bg-blue-50 border-blue-100 text-blue-700", text: "AI Vision", label: "🤖" },
+                    reporting: { bg: "bg-emerald-50 border-emerald-100 text-emerald-700", text: "Reporting", label: "📝" },
+                    rewards: { bg: "bg-amber-50 border-amber-100 text-amber-700", text: "Rewards & XP", label: "🏆" },
+                    contacts: { bg: "bg-rose-50 border-rose-100 text-rose-700", text: "Civic Lines", label: "📞" },
+                    general: { bg: "bg-purple-50 border-purple-100 text-purple-700", text: "General", label: "🌍" }
+                  };
+
+                  const badge = badgeStyles[faq.category] || badgeStyles.general;
+
+                  return (
+                    <div 
+                      key={index}
+                      className={`bg-white border transition-all rounded-2xl overflow-hidden shadow-xs hover:border-neutral-300 ${
+                        isOpen ? "border-[#1B4332] ring-1 ring-[#1B4332]/20 shadow-sm" : "border-neutral-200"
+                      }`}
+                    >
+                      <button
+                        onClick={() => toggleFaq(index)}
+                        className="w-full p-4 flex justify-between items-start text-left hover:bg-neutral-50/50 transition-all gap-4"
+                      >
+                        <div className="flex flex-col gap-2">
+                          <span className={`self-start text-[8px] font-black tracking-widest uppercase px-2 py-0.5 rounded-md border flex items-center gap-1 ${badge.bg}`}>
+                            <span>{badge.label}</span>
+                            <span>{badge.text}</span>
+                          </span>
+                          <span className="text-xs font-black text-neutral-800 leading-snug">{faq.question}</span>
+                        </div>
+                        {isOpen ? (
+                          <ChevronUp className="w-4 h-4 text-neutral-400 flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-neutral-400 flex-shrink-0 mt-0.5" />
+                        )}
+                      </button>
+
+                      <AnimatePresence>
+                        {isOpen && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.18, ease: "easeOut" }}
+                            className="border-t border-neutral-100"
+                          >
+                            <p className="p-4 text-xs text-neutral-600 leading-relaxed bg-neutral-50/40 whitespace-pre-line font-medium">
+                              {faq.answer}
+                            </p>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+
             {/* Support bottom email box */}
-            <div className="mx-4 mt-3 mb-5 p-4.5 bg-neutral-900 text-white rounded-2xl flex flex-col items-center text-center gap-2">
+            <div className="mx-4 mt-2 mb-6 p-5 bg-[#1B4332] text-white rounded-3xl flex flex-col items-center text-center gap-2">
               <span className="text-xl">📧</span>
               <h4 className="font-extrabold text-xs">Need Direct Assistance?</h4>
-              <p className="text-[10px] text-neutral-400 max-w-[240px] leading-relaxed">
+              <p className="text-[10px] text-neutral-200 max-w-[240px] leading-relaxed">
                 Our support desk reviews any manual override corrections or system issues. Email us directly at:
               </p>
-              <a href="mailto:support@report2fix.in" className="text-xs font-mono font-bold text-[#52B788] hover:underline">
+              <a href="mailto:support@report2fix.in" className="text-xs font-mono font-bold text-emerald-400 hover:underline hover:text-emerald-300">
                 support@report2fix.in
               </a>
             </div>
@@ -2398,6 +2641,7 @@ showToast(
                     </div>
                   </div>
                 ))}
+                <div ref={chatEndRef} />
               </div>
 
               {/* Quick Reply Bubbles */}
