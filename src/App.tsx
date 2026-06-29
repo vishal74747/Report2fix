@@ -687,7 +687,8 @@ setReportStep(3);
 showToast(
   `AI Detection finished: ${formattedType} (${confidence}%)`,
   "success"
-); catch (err) {
+); 
+    }catch (err) {
       console.error("AI analyzing request failed:", err);
       // Offline fallback
       showToast("AI offline — using manual selection", "error");
