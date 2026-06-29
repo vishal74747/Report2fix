@@ -660,20 +660,34 @@ export default function App() {
       }
 
       const data = await res.json();
-      let detected = data.issue_type ? data.issue_type.toLowerCase() : "garbage";
-      if (detected !== "pothole" && detected !== "garbage") {
-        detected = "garbage";
-      }
 
-      const formattedType = (detected === "pothole" ? "Pothole" : "Garbage") as "Pothole" | "Garbage";
-      const confidence = Math.round((data.confidence || 0.85) * 100);
+if (!data.detections || data.detections.length === 0) {
+  showToast("No pothole or garbage detected.", "error");
+  return;
+}
 
-      setAiDetectedType(formattedType);
-      setSelectedType(formattedType);
-      setAiConfidence(confidence);
-      setReportStep(3); // Advance to Sub-step 3: Details
-      showToast(`AI Detection finished: ${formattedType}!`, "success");
-    } catch (err) {
+// Select the highest confidence detection
+const bestDetection = data.detections.reduce(
+  (best: any, current: any) =>
+    current.confidence > best.confidence ? current : best
+);
+
+const formattedType =
+  bestDetection.category === "Pothole"
+    ? "Pothole"
+    : "Garbage";
+
+const confidence = Math.round(bestDetection.confidence * 100);
+
+setAiDetectedType(formattedType);
+setSelectedType(formattedType);
+setAiConfidence(confidence);
+setReportStep(3);
+
+showToast(
+  `AI Detection finished: ${formattedType} (${confidence}%)`,
+  "success"
+); catch (err) {
       console.error("AI analyzing request failed:", err);
       // Offline fallback
       showToast("AI offline — using manual selection", "error");
